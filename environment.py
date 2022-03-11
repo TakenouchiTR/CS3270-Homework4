@@ -1,11 +1,19 @@
+"""
+Stores information about an environment that an agent can navigate, including
+the start position, the rewards for each tile, the goals, and the restart tiles.
+"""
+
 import json
-from os import environ
 
 __author__ = "Shawn Carter"
 __version__ = "Spring 2022"
 __pylint__ = "Version 2.12.2"
 
 class Environment():
+    """
+    Stores information about an environment that an agent can navigate, including
+    the start position, the rewards for each tile, the goals, and the restart tiles.
+    """
     _rewards: list
     _goals: set
     _restart_tiles: set
@@ -14,10 +22,13 @@ class Environment():
 
     def __init__(self, file_path):
         self.load_file(file_path)
-        self.create_action_cache()
+        self._create_action_cache()
 
     def load_file(self, file_path):
-        with open(file_path) as file:
+        """
+        Loads an environment from a file.
+        """
+        with open(file_path, encoding="utf-8") as file:
             data = json.load(file)
             self._rewards = data["environment"]
             self._goals = data["win_tiles"]
@@ -25,13 +36,13 @@ class Environment():
             self._width = data["width"]
             self._start_position = data["start_position"]
 
-    def create_action_cache(self):
+    def _create_action_cache(self):
         self.cache = []
         for i in range(len(self._rewards)):
             actions = []
-            
+
             #Not on top edge
-            if i // 10 != 0:
+            if i // self._width != 0:
                 actions.append((i, i - 10))
             #Not on right edge
             if i % self._width != self._width - 1:
@@ -42,7 +53,7 @@ class Environment():
             #Not on left edge
             if i % self._width != 0:
                 actions.append((i, i - 1))
-            
+
             self.cache.append(actions)
 
     def get_actions_for_position(self, position):
@@ -52,7 +63,7 @@ class Environment():
         Args: position - The specified position.
         Return: A list containing all posible actions for the position.
         """
-        return self.cache[position]
+        return self.cache[position][:]
 
     def is_goal_tile(self, position):
         """
