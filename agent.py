@@ -14,12 +14,9 @@ class Agent():
     Represents an agent that can learn to navigate an environment.
     """
 
-    # pylint: disable=too-many-instance-attributes
-
     _alpha: float = .1
     _gamma: float = .9
     _epsilon: float = .1
-    _found_end: bool = False
     _policy: list = None
     _q_table: dict = {}
     _environment: Environment = None
@@ -29,7 +26,6 @@ class Agent():
         self._alpha = .1
         self._gamma = .9
         self._epsilon = .1
-        self._found_end = False
         self._policy = None
         self._q_table = {}
         self._environment = None
@@ -42,7 +38,6 @@ class Agent():
         random.seed(31)
         self._q_table.clear()
         self._policy = None
-        self._found_end = False
 
         self._environment = Environment(file_path)
         self._tile_visit_counts = [0] * len(self.environment.rewards)
@@ -121,12 +116,11 @@ class Agent():
 
         return new_score
 
-    def _should_end_episode(self, path):
+    def _end_movement_step(self, path):
         cur_position = path[-1]
         if self.environment.is_goal_tile(cur_position):
             if not self._found_end or len(path) < len(self._policy):
                 self._policy = path
-                self._found_end = True
             return True
         if self.environment.is_restart_tile(cur_position):
             if self._policy is None or (not self._found_end and len(path) < len(self.policy)):
@@ -160,7 +154,7 @@ class Agent():
                 visited.add(action)
 
                 self._tile_visit_counts[position] += 1
-                if self._should_end_episode(path):
+                if self._end_movement_step(path):
                     break
 
             cur_epsilon = i / episodes * self._epsilon
@@ -260,3 +254,7 @@ class Agent():
         Return - The agent's environment.
         """
         return self._environment
+
+    @property
+    def _found_end(self):
+        return self.policy is not None and self.environment.is_goal_tile(self.policy[-1])
