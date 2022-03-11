@@ -6,6 +6,12 @@ __version__ = "Spring 2022"
 __pylint__ = "Version 2.12.2"
 
 class Environment():
+    _rewards: list
+    _goals: set
+    _restart_tiles: set
+    _width: int
+    _start_position: int
+
     def __init__(self, file_path):
         self.load_file(file_path)
         self.create_action_cache()
@@ -13,28 +19,28 @@ class Environment():
     def load_file(self, file_path):
         with open(file_path) as file:
             data = json.load(file)
-            self.rewards = data["environment"]
-            self.goals = data["win_tiles"]
-            self.restart_tiles = data["restart_tiles"]
-            self.width = data["width"]
-            self.start_position = data["start_position"]
+            self._rewards = data["environment"]
+            self._goals = data["win_tiles"]
+            self._restart_tiles = data["restart_tiles"]
+            self._width = data["width"]
+            self._start_position = data["start_position"]
 
     def create_action_cache(self):
         self.cache = []
-        for i in range(len(self.rewards)):
+        for i in range(len(self._rewards)):
             actions = []
             
             #Not on top edge
             if i // 10 != 0:
                 actions.append((i, i - 10))
             #Not on right edge
-            if i % self.width != self.width - 1:
+            if i % self._width != self._width - 1:
                 actions.append((i, i + 1))
             #Not on bottom edge
-            if i // 10 != len(self.rewards) // self.width - 1:
+            if i // 10 != len(self._rewards) // self._width - 1:
                 actions.append((i, i + 10))
             #Not on left edge
-            if i % self.width != 0:
+            if i % self._width != 0:
                 actions.append((i, i - 1))
             
             self.cache.append(actions)
@@ -47,3 +53,62 @@ class Environment():
         Return: A list containing all posible actions for the position.
         """
         return self.cache[position]
+
+    def is_goal_tile(self, position):
+        """
+        Checks whether or not a tile is a goal or not.
+
+        Params - position: The specified position.
+        Return - [True] iff the tile is a goal, otherwise [False]
+        """
+        return position in self._goals
+
+    def is_restart_tile(self, position):
+        """
+        Checks whether or not a tile is a restart tile or not.
+
+        Params - position: The specified position.
+        Return - [True] iff the tile is a restart tile, otherwise [False]
+        """
+        return position in self._restart_tiles
+
+    def get_reward_at(self, position):
+        """
+        Gets the reward at a specified position.
+
+        Params - position: The specified position.
+        Return - The reward at the specified position.
+        """
+        if position < 0 or position >= len(self._rewards):
+            raise Exception("position must be at least 0, but less than the number of tiles.")
+        return self._rewards[position]
+
+    @property
+    def width(self):
+        """
+        Gets the environment's width.
+
+        Params - None
+        Return - The environment's width.
+        """
+        return self._width
+
+    @property
+    def start_position(self):
+        """
+        Gets the environment's start position.
+
+        Params - None
+        Return - The environment's start position.
+        """
+        return self._start_position
+
+    @property
+    def rewards(self):
+        """
+        Gets the environment's rewards.
+
+        Params - None
+        Return - The environment's rewards.
+        """
+        return self._rewards

@@ -1,4 +1,8 @@
-from random import randint, random, seed
+"""
+Represents an agent that can learn to navigate an environment.
+"""
+
+from random import random, seed, choice
 from environment import Environment
 
 __author__ = "Shawn Carter"
@@ -6,28 +10,46 @@ __version__ = "Spring 2022"
 __pylint__ = "Version 2.12.2"
 
 class Agent():
+    """
+    Represents an agent that can learn to navigate an environment.
+    """
+
+    # pylint: disable=too-many-instance-attributes
+
+    _alpha: float = .1
+    _gamma: float = .9
+    _epsilon: float = .1
+    _found_end: bool = False
+    _policy: list = None
+    _q_table: dict = {}
+    _environment: Environment = None
+    _tile_visit_counts: list = None
+
     def __init__(self):
-        self.alpha = .1
-        self.gamma = .9
-        self.epsilon = .1
-        self.found_end = False
-        self.policy = None
-        self.q_table = {}
-        self.environment = None
-        self.hit_counts = None
+        self._alpha = .1
+        self._gamma = .9
+        self._epsilon = .1
+        self._found_end = False
+        self._policy = None
+        self._q_table = {}
+        self._environment = None
+        self._tile_visit_counts = None
 
     def load_environment(self, file_path):
+        """
+        Loads a new environment and resets the q-table and policy.
+        """
         seed(31)
-        self.q_table.clear()
-        self.policy = None
-        self.found_end = False
+        self._q_table.clear()
+        self._policy = None
+        self._found_end = False
 
-        self.environment = Environment(file_path)
-        self.hit_counts = [0] * len(self.environment.rewards)
+        self._environment = Environment(file_path)
+        self._tile_visit_counts = [0] * len(self.environment.rewards)
 
         for i in range(len(self.environment.rewards)):
             for action in self.environment.get_actions_for_position(i):
-                self.q_table[action] = 0
+                self._q_table[action] = 0
 
     def _get_best_action_for_position(self, position, visited = None):
         """
@@ -48,8 +70,10 @@ class Agent():
         if len(actions) == 0:
             return None
 
-        best_actions = list(filter(lambda action: self.q_table[action] == self.q_table[actions[0]], actions))
-        selected_action = best_actions[randint(0, len(best_actions) - 1)]
+        best_actions = list(
+            filter(lambda action: self._q_table[action] == self._q_table[actions[0]], actions)
+        )
+        selected_action = choice(best_actions)
         return selected_action
 
     def _get_random_action_for_position(self, position):
@@ -62,8 +86,20 @@ class Agent():
         Return: A list containing a randomly selected action for the position.
         """
         actions = self.environment.get_actions_for_position(position)
-        selected_action = actions[randint(0, len(actions) - 1)]
+        selected_action = choice(actions)
         return selected_action
+
+    def _get_next_action_for_position(self, position, episilon, visited):
+        action: tuple
+
+        if random() > episilon:
+            action = self._get_best_action_for_position(position, visited)
+            if action is None:
+                action = self._get_random_action_for_position(position)
+        else:
+            action = self._get_random_action_for_position(position)
+
+        return action
 
     def _calculate_new_q_value(self, action):
         """
@@ -72,12 +108,30 @@ class Agent():
         Args: Action - The specified action.
         Return: The new q-score.
         """
-        cur_score = self.q_table[action]
+        cur_score = self._q_table[action]
         next_position = action[1]
-        next_best_action = self._get_best_action_for_position(next_position)
+
+        next_reward = self.environment.get_reward_at(next_position)
+        next_actions = self.environment.get_actions_for_position(next_position)
+        next_best_q_value = max(map(self._q_table.get, next_actions))
+
         new_score = (1 - self.alpha) * cur_score + self.alpha * \
-            (self.environment.rewards[next_position] + self.gamma * self.q_table[next_best_action])
+            (next_reward + self.gamma * next_best_q_value)
+
         return new_score
+
+    def _should_end_episode(self, path):
+        cur_position = path[-1]
+        if self.environment.is_goal_tile(cur_position):
+            if not self._found_end or len(path) < len(self._policy):
+                self._policy = path
+                self._found_end = True
+            return True
+        if self.environment.is_restart_tile(cur_position):
+            if self._policy is None or (not self._found_end and len(path) < len(self.policy)):
+                self._policy = path
+            return True
+        return False
 
     def train(self, episodes):
         """
@@ -87,39 +141,121 @@ class Agent():
         Return: None
         """
 
-        cur_epsilon = self.epsilon
+        cur_epsilon = self._epsilon
 
         for i in range(episodes):
             position = self.environment.start_position
             path = [position]
-            self.hit_counts[position] += 1
+            self._tile_visit_counts[position] += 1
             visited = set()
 
             while True:
-                action: tuple
-                if random() > cur_epsilon:
-                    action = self._get_best_action_for_position(position, visited)
-                    if action is None:
-                        action = self._get_random_action_for_position(position)
-                else:
-                    action = self._get_random_action_for_position(position)
+                action = self._get_next_action_for_position(position, cur_epsilon, visited)
 
-                self.q_table[action] = self._calculate_new_q_value(action)
+                self._q_table[action] = self._calculate_new_q_value(action)
                 position = action[1]
+
                 path.append(position)
                 visited.add(action)
-                self.hit_counts[position] += 1
 
-                if position in self.environment.goals:
-                    if not self.found_end or len(path) < len(self.policy):
-                        if len(path) == 13:
-                            print(f"shortest {i}")
-                            print(path)
-                        self.policy = path
-                        self.found_end = True
+                self._tile_visit_counts[position] += 1
+                if self._should_end_episode(path):
                     break
-                if position in self.environment.restart_tiles:
-                    if not self.found_end and (self.policy is None or len(self.policy) < len(path)):
-                        self.policy = path
-                    break
-            cur_epsilon = i / episodes * self.epsilon
+
+            cur_epsilon = i / episodes * self._epsilon
+
+    @property
+    def alpha(self):
+        """
+        Gets the agent's alpha value.
+
+        Params - None
+        Return - The agent's alpha value.
+        """
+        return self._alpha
+
+    @alpha.setter
+    def alpha(self, value):
+        """
+        Sets the agent's alpha value; must be between 0 and 1, inclusive.
+
+        Params - value: The new alpha value.
+        Return - None
+        """
+        if value < 0 or value > 1:
+            raise Exception("alpha must be between 0 and 1, inclusive.")
+        self._alpha = value
+
+    @property
+    def gamma(self):
+        """
+        Sets the agent's alpha value; must be between 0 and 1, inclusive.
+
+        Params - None
+        Return - The agent's alpha value.
+        """
+        return self._gamma
+
+    @gamma.setter
+    def gamma(self, value):
+        """
+        Sets the agent's gamma value; must be between 0 and 1, inclusive.
+
+        Params - value: The new gamma value.
+        Return - None
+        """
+        if value < 0 or value > 1:
+            raise Exception("gamma must be between 0 and 1, inclusive.")
+        self._gamma = value
+
+    @property
+    def epsilon(self):
+        """
+        Gets the agent's epsilon value.
+
+        Params - None
+        Return - The agent's epsilon value.
+        """
+        return self._epsilon
+
+    @epsilon.setter
+    def epsilon(self, value):
+        """
+        Sets the agent's epsilon value; must be between 0 and 1, inclusive.
+
+        Params - value: The new epsilon value
+        Return - None
+        """
+        if value < 0 or value > 1:
+            raise Exception("epsilon must be between 0 and 1, inclusive.")
+        self._epsilon = value
+
+    @property
+    def policy(self):
+        """
+        Gets the agent's policy.
+
+        Params - None
+        Return - The agent's policy.
+        """
+        return self._policy
+
+    @property
+    def tile_visit_counts(self):
+        """
+        Gets a list representing how many times the agent has visited a location.
+
+        Params - None
+        Return - The list of how many times the agent has visited a location.
+        """
+        return self._tile_visit_counts
+
+    @property
+    def environment(self):
+        """
+        Gets the agent's environment.
+
+        Params - None
+        Return - The agent's environment.
+        """
+        return self._environment
