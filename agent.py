@@ -2,7 +2,7 @@
 Represents an agent that can learn to navigate an environment.
 """
 
-from random import random, seed, choice
+import random
 from environment import Environment
 
 __author__ = "Shawn Carter"
@@ -39,7 +39,7 @@ class Agent():
         """
         Loads a new environment and resets the q-table and policy.
         """
-        seed(31)
+        random.seed(31)
         self._q_table.clear()
         self._policy = None
         self._found_end = False
@@ -63,6 +63,7 @@ class Agent():
                 None if all adjacent tiles have been visited.
         """
         actions = self.environment.get_actions_for_position(position)
+
         if visited is not None:
             actions = list(filter(lambda action: action not in visited, actions))
 
@@ -70,11 +71,11 @@ class Agent():
         if len(actions) == 0:
             return None
 
+        actions.sort(key = self._q_table.get, reverse = True)
         best_actions = list(
             filter(lambda action: self._q_table[action] == self._q_table[actions[0]], actions)
         )
-        selected_action = choice(best_actions)
-        return selected_action
+        return random.choice(best_actions)
 
     def _get_random_action_for_position(self, position):
         """
@@ -86,13 +87,13 @@ class Agent():
         Return: A list containing a randomly selected action for the position.
         """
         actions = self.environment.get_actions_for_position(position)
-        selected_action = choice(actions)
+        selected_action = random.choice(actions)
         return selected_action
 
     def _get_next_action_for_position(self, position, episilon, visited):
         action: tuple
 
-        if random() > episilon:
+        if random.random() > episilon:
             action = self._get_best_action_for_position(position, visited)
             if action is None:
                 action = self._get_random_action_for_position(position)
