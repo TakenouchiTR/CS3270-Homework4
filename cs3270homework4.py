@@ -11,7 +11,7 @@ __author__ = "Shawn Carter"
 __version__ = "Spring 2022"
 __pylint__ = "Version 2.12.2"
 
-EPISODES = 100000
+EPISODES = 1_000_000
 ENVIRONMENT_FILE = "sample_environment.json"
 
 def display_visit_counts(visit_counts, environment_width):
@@ -61,6 +61,7 @@ def main():
     agent.load_environment(ENVIRONMENT_FILE)
 
     start = time.time()
+    print(f"Running {EPISODES:,} training episodes...")
     agent.train(EPISODES)
 
     duration = time.time() - start
