@@ -136,6 +136,7 @@ class Agent():
         Return: None
         """
         cur_percent = 0
+        percent_update_interval = episodes // 100
         cur_epsilon = self._epsilon
 
         for i in range(episodes):
@@ -153,13 +154,13 @@ class Agent():
                 path.append(position)
                 visited.add(action)
 
-                if i * 100 // episodes  > cur_percent:
-                    cur_percent = i * 100 // episodes
-                    print(f"{cur_percent}% done...")
-
                 self._tile_visit_counts[position] += 1
                 if self._end_movement_step(path):
                     break
+
+            if i % percent_update_interval == 0:
+                print(f"{cur_percent}% done...")
+                cur_percent += 1
 
             cur_epsilon = i / episodes * self._epsilon
 
