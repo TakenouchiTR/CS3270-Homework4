@@ -118,12 +118,12 @@ class Agent():
         return new_score
 
     def _calculate_total_policy_reward(self, path):
-        return sum(map(lambda tile: self.environment.get_reward_at(tile), path))
+        return sum(map(self.environment.get_reward_at, path))
 
     def _end_movement_step(self, path):
         cur_position = path[-1]
 
-        if self.environment.is_goal_tile(cur_position) or self.environment.is_restart_tile(cur_position):
+        if self.environment.is_restart_tile(cur_position):
             path_reward = self._calculate_total_policy_reward(path)
 
             if self.policy is None or path_reward > self.policy.reward:
