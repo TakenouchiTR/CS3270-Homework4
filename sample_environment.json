@@ -1,6 +1,6 @@
 {
     "win_tiles": [9],
-    "restart_tiles": [23, 33, 43],
+    "game_over_tiles": [23, 33, 43],
     "impassible_tiles": [],
     "width": 10,
     "start_position": 30,

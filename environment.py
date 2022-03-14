@@ -16,7 +16,7 @@ class Environment():
     """
     _rewards: list
     _goals: set
-    _restart_tiles: set
+    _game_over_tile: set
     _width: int
     _start_position: int
 
@@ -32,7 +32,7 @@ class Environment():
             data = json.load(file)
             self._rewards = data["environment"]
             self._goals = data["win_tiles"]
-            self._restart_tiles = data["restart_tiles"]
+            self._game_over_tile = data["game_over_tiles"]
             self._width = data["width"]
             self._start_position = data["start_position"]
 
@@ -70,18 +70,27 @@ class Environment():
         Checks whether or not a tile is a goal or not.
 
         Params - position: The specified position.
-        Return - [True] iff the tile is a goal, otherwise [False]
+        Return - [True] iff the tile is a goal, otherwise [False].
         """
         return position in self._goals
 
-    def is_restart_tile(self, position):
+    def is_game_over_tile(self, position):
         """
         Checks whether or not a tile is a restart tile or not.
 
         Params - position: The specified position.
         Return - [True] iff the tile is a restart tile, otherwise [False]
         """
-        return position in self._restart_tiles
+        return position in self._game_over_tile
+
+    def is_restart_tile(self, position):
+        """
+        Checks whether a tile is either a game over tile or a goal tile.
+
+        Params - position: The specified position.
+        Return - [True] iff the tile is a goal or a game over tile, otherwise [False].
+        """
+        return self.is_game_over_tile(position) or self.is_goal_tile(position)
 
     def get_reward_at(self, position):
         """
