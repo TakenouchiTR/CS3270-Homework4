@@ -4,6 +4,7 @@ Represents an agent that can learn to navigate an environment.
 
 import random
 from environment import Environment
+from policy import Policy
 
 __author__ = "Shawn Carter"
 __version__ = "Spring 2022"
@@ -17,7 +18,7 @@ class Agent():
     _alpha: float = .1
     _gamma: float = .9
     _epsilon: float = .1
-    _policy: list = None
+    _policy: Policy = None
     _q_table: dict = {}
     _environment: Environment = None
     _tile_visit_counts: list = None
@@ -116,15 +117,18 @@ class Agent():
 
         return new_score
 
+    def _calculate_total_policy_reward(self, path):
+        return sum(map(lambda tile: self.environment.get_reward_at(tile), path))
+
     def _end_movement_step(self, path):
         cur_position = path[-1]
-        if self.environment.is_goal_tile(cur_position):
-            if not self._found_end or len(path) < len(self._policy):
-                self._policy = path
-            return True
-        if self.environment.is_restart_tile(cur_position):
-            if self._policy is None or (not self._found_end and len(path) < len(self.policy)):
-                self._policy = path
+
+        if self.environment.is_goal_tile(cur_position) or self.environment.is_restart_tile(cur_position):
+            path_reward = self._calculate_total_policy_reward(path)
+
+            if self.policy is None or path_reward > self.policy.reward:
+                self._policy = Policy(path_reward, path)
+
             return True
         return False
 
@@ -135,7 +139,6 @@ class Agent():
         Args: episodes - The number of episodes to run.
         Return: None
         """
-        cur_percent = 0
         percent_update_interval = episodes // 100
         cur_epsilon = self._epsilon
 
@@ -158,9 +161,8 @@ class Agent():
                 if self._end_movement_step(path):
                     break
 
-            if i % percent_update_interval == 0:
-                print(f"{cur_percent}% done...")
-                cur_percent += 1
+            if percent_update_interval == 0 or i % percent_update_interval == 0:
+                print(f"{i * 100 // episodes}% done...")
 
             cur_epsilon = i / episodes * self._epsilon
 

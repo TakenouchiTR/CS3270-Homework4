@@ -48,7 +48,7 @@ def display_agent_information(agent: Agent):
     Params - agent: The trained agent
     Return - None
     """
-    print(f"Found policy: {agent.policy}")
+    print(f"Found policy: {agent.policy.path}")
     display_success_rate(agent)
     print("Tile visit counts:")
     display_visit_counts(agent.tile_visit_counts, agent.environment.width)
